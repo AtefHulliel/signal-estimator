@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Residency Interview Probability Estimator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#15243a;
+    --ink-soft:#43536b;
+    --muted:#6b7a90;
+    --line:#e3e8ef;
+    --bg:#f5f7fa;
+    --surface:#ffffff;
+    --signal:#157a51;
+    --signal-deep:#0f5c3c;
+    --signal-tint:#e7f4ec;
+    --nosignal:#586a80;
+    --nosignal-tint:#eef1f5;
+    --edit:#c98a12;
+    --edit-tint:#fdf6e6;
+    --shadow:0 1px 2px rgba(21,36,58,.05), 0 8px 28px rgba(21,36,58,.06);
+    --sans:'Inter',system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    --display:'Space Grotesk','Inter',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--bg);
+    line-height:1.5;
+    font-feature-settings:"tnum" 1,"cv05" 1;
+  }
+  .wrap{max-width:820px;margin:0 auto;padding:40px 22px 64px}
+
+  /* ---------- header ---------- */
+  header{margin-bottom:26px}
+  h1{
+    font-family:var(--display);
+    font-size:clamp(24px,4.6vw,34px);
+    line-height:1.08;
+    letter-spacing:-.02em;
+    margin:0 0 8px;
+    font-weight:700;
+  }
+  .lede{margin:0;color:var(--muted);font-size:15px;max-width:60ch}
+
+  /* ---------- hero readout ---------- */
+  .hero{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-bottom:14px;
+  }
+  .panel{
+    border-radius:16px;
+    padding:22px 22px 20px;
+    color:#fff;
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+    min-height:150px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  }
+  .panel.signal{background:linear-gradient(155deg,var(--signal) 0%,var(--signal-deep) 100%)}
+  .panel.nosignal{background:linear-gradient(155deg,#66788e 0%,var(--nosignal) 100%)}
+  .panel .tag{
+    font-size:12.5px;font-weight:600;letter-spacing:.01em;
+    opacity:.9;display:flex;align-items:center;gap:7px;
+  }
+  .dot{width:8px;height:8px;border-radius:50%;background:#fff;opacity:.85;flex:none}
+  .panel .num{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:clamp(40px,9vw,58px);
+    line-height:1;
+    letter-spacing:-.03em;
+    margin-top:14px;
+  }
+  .panel .sub{font-size:12.5px;opacity:.82;margin-top:6px}
+
+  /* ---------- ratio band ---------- */
+  .ratio{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px 20px;
+    display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+    box-shadow:var(--shadow);
+    margin-bottom:30px;
+  }
+  .ratio .big{
+    font-family:var(--display);font-weight:700;font-size:26px;
+    letter-spacing:-.02em;color:var(--signal-deep);line-height:1;
+  }
+  .ratio .txt{color:var(--ink-soft);font-size:14.5px}
+  .ratio .txt b{color:var(--ink);font-weight:600}
+
+  /* ---------- section ---------- */
+  .section-h{
+    font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);margin:0 0 14px;
+  }
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:16px;
+    padding:22px;box-shadow:var(--shadow);margin-bottom:26px;
+  }
+
+  /* ---------- inputs ---------- */
+  .inputs .card{border-left:3px solid var(--edit)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 20px}
+  .field label{
+    display:block;font-size:13.5px;font-weight:500;color:var(--ink-soft);
+    margin-bottom:7px;
+  }
+  .control{position:relative;display:flex;align-items:center}
+  .control input{
+    width:100%;font-family:var(--sans);font-size:17px;font-weight:600;color:var(--ink);
+    background:var(--edit-tint);border:1.5px solid #eadfc2;border-radius:10px;
+    padding:11px 13px;outline:none;transition:border-color .12s,box-shadow .12s;
+    -moz-appearance:textfield;
+  }
+  .control.pct input{padding-right:34px}
+  .control input::-webkit-outer-spin-button,
+  .control input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .control input:focus{border-color:var(--edit);box-shadow:0 0 0 3px rgba(201,138,18,.18)}
+  .control .unit{position:absolute;right:13px;color:var(--muted);font-size:15px;font-weight:600;pointer-events:none}
+  .hint{grid-column:1/-1;font-size:12.5px;color:var(--muted);margin:2px 0 0}
+  .warn{grid-column:1/-1;font-size:13px;color:#b4451f;margin:2px 0 0;display:none}
+  .warn.show{display:block}
+
+  /* ---------- breakdown table ---------- */
+  table{width:100%;border-collapse:collapse}
+  caption{caption-side:top;text-align:left;font-size:12.5px;color:var(--muted);margin-bottom:12px}
+  tbody tr{border-top:1px solid var(--line)}
+  tbody tr:first-child{border-top:none}
+  td{padding:11px 0;font-size:14.5px;vertical-align:middle}
+  td.k{color:var(--ink-soft);padding-right:14px}
+  td.v{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;font-size:15px}
+  tr.rate td.v{color:var(--signal-deep)}
+  tr.rate.neg td.v{color:var(--nosignal)}
+
+  /* ---------- note ---------- */
+  .note{
+    background:var(--edit-tint);border:1px solid #efe3c6;border-radius:14px;
+    padding:16px 18px;font-size:13px;color:#6d5a2a;line-height:1.55;
+  }
+  .note strong{color:#4f4118}
+  footer{margin-top:26px;font-size:12px;color:var(--muted);text-align:center}
+  footer a{color:var(--ink-soft)}
+
+  @media (max-width:560px){
+    .wrap{padding:28px 16px 48px}
+    .hero{grid-template-columns:1fr}
+    .grid{grid-template-columns:1fr}
+    .panel{min-height:0}
+  }
+
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ink:#eef2f7;--ink-soft:#b8c2d0;--muted:#8b98a9;--line:#2a3646;
+      --bg:#101722;--surface:#182231;--signal-tint:#14342a;
+      --edit:#d9a53c;--edit-tint:#221d10;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 28px rgba(0,0,0,.35);
+    }
+    .ratio .big{color:#54c98c}
+    .control input{border-color:#4a3d1f;color:var(--ink)}
+    .control input:focus{border-color:var(--edit)}
+    tr.rate td.v{color:#54c98c}
+    .note{border-color:#3a2f16;color:#cbb98d}
+    .note strong{color:#e6d9b4}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Residency Interview Probability Estimator</h1>
+    <p class="lede">Estimate how much a program's interview rate differs for applicants who did and didn't send a Signal, using the program's publicly reported figures.</p>
+  </header>
+
+  <!-- hero -->
+  <div class="hero">
+    <div class="panel signal">
+      <span class="tag"><span class="dot"></span>Signal sent</span>
+      <div>
+        <div class="num" id="rateSignal">—</div>
+        <div class="sub">Estimated interview rate</div>
+      </div>
+    </div>
+    <div class="panel nosignal">
+      <span class="tag"><span class="dot"></span>No Signal</span>
+      <div>
+        <div class="num" id="rateNoSignal">—</div>
+        <div class="sub">Estimated interview rate</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ratio">
+    <span class="big" id="ratio">—</span>
+    <span class="txt">Sending a Signal is associated with roughly this multiple of the interview rate seen among applicants who <b>didn't</b> send one.</span>
+  </div>
+
+  <!-- inputs -->
+  <div class="inputs">
+    <h2 class="section-h">Your inputs</h2>
+    <div class="card">
+      <div class="grid">
+        <div class="field">
+          <label for="appCount">Total applicant count</label>
+          <div class="control"><input id="appCount" type="number" min="0" step="1" value="850" inputmode="numeric"></div>
+        </div>
+        <div class="field">
+          <label for="intCount">Applicants invited to interview</label>
+          <div class="control"><input id="intCount" type="number" min="0" step="1" value="117" inputmode="numeric"></div>
+        </div>
+        <div class="field">
+          <label for="appSig">Applicants who sent a Signal</label>
+          <div class="control pct"><input id="appSig" type="number" min="0" max="100" step="1" value="11" inputmode="decimal"><span class="unit">%</span></div>
+        </div>
+        <div class="field">
+          <label for="intSig">Interviewed applicants who sent a Signal</label>
+          <div class="control pct"><input id="intSig" type="number" min="0" max="100" step="1" value="54" inputmode="decimal"><span class="unit">%</span></div>
+        </div>
+        <p class="hint">Enter the two percentages as whole numbers, exactly as the program reports them. Everything below updates as you type.</p>
+        <p class="warn" id="warn"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- breakdown -->
+  <h2 class="section-h">Estimated breakdown</h2>
+  <div class="card">
+    <table>
+      <caption>Reconstructed from the reported percentages — all values are estimates.</caption>
+      <tbody>
+        <tr><td class="k">Est. applicants who sent a Signal</td><td class="v" id="oSigApp">—</td></tr>
+        <tr><td class="k">Est. applicants who did not send a Signal</td><td class="v" id="oNoApp">—</td></tr>
+        <tr><td class="k">Est. interviewed applicants who sent a Signal</td><td class="v" id="oSigInt">—</td></tr>
+        <tr><td class="k">Est. interviewed applicants who did not send a Signal</td><td class="v" id="oNoInt">—</td></tr>
+        <tr class="rate"><td class="k">Est. interview rate — Signal sent</td><td class="v" id="oRateSig">—</td></tr>
+        <tr class="rate neg"><td class="k">Est. interview rate — no Signal</td><td class="v" id="oRateNo">—</td></tr>
+        <tr><td class="k">Est. overall interview rate</td><td class="v" id="oOverall">—</td></tr>
+        <tr><td class="k">Est. relative increase from sending a Signal</td><td class="v" id="oMult">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="note"><strong>These are estimates.</strong> Programs usually publish Signal percentages rounded to whole numbers, so the counts here are reconstructed from those rounded figures rather than measured directly. Rates are computed from the rounded counts, and the "no Signal" counts are derived by subtraction so the parts sum to the totals. Small changes in the reported percentages can shift the rates and the ratio, so treat these as a rough guide to the size of the Signal effect, not a precise probability.</p>
+
+  <footer>Runs entirely in your browser — no data leaves this page.</footer>
+</div>
+
+<script>
+(function(){
+  var ids=['appCount','intCount','appSig','intSig'];
+  var el={};
+  ['rateSignal','rateNoSignal','ratio','warn','oSigApp','oNoApp','oSigInt','oNoInt','oRateSig','oRateNo','oOverall','oMult']
+    .forEach(function(i){el[i]=document.getElementById(i);});
+  ids.forEach(function(i){el[i]=document.getElementById(i);});
+
+  function numFmt(n){return n.toLocaleString(undefined,{maximumFractionDigits:0});}
+  function pct(x){return (x*100).toFixed(1)+'%';}
+  function mult(x){return x.toFixed(1)+'×';}
+
+  function parse(v){var n=parseFloat(v);return isFinite(n)?n:NaN;}
+
+  function calc(){
+    var N=parse(el.appCount.value);
+    var I=parse(el.intCount.value);
+    var pa=parse(el.appSig.value)/100;
+    var pi=parse(el.intSig.value)/100;
+
+    // validity
+    var ok = isFinite(N)&&isFinite(I)&&isFinite(pa)&&isFinite(pi)&&N>0&&I>=0;
+    var msg='';
+    if(isFinite(I)&&isFinite(N)&&I>N) msg='Applicants invited to interview is greater than the total applicant count — check the two counts.';
+    else if(isFinite(pa)&&(pa<0||pa>1)) msg='The applicant Signal percentage should be between 0 and 100.';
+    else if(isFinite(pi)&&(pi<0||pi>1)) msg='The interviewed Signal percentage should be between 0 and 100.';
+    el.warn.textContent=msg;
+    el.warn.classList.toggle('show',!!msg);
+
+    if(!ok){
+      ['rateSignal','rateNoSignal','ratio','oSigApp','oNoApp','oSigInt','oNoInt','oRateSig','oRateNo','oOverall','oMult']
+        .forEach(function(k){el[k].textContent='—';});
+      return;
+    }
+
+    var sigApp=Math.round(N*pa);
+    var noApp=N-sigApp;
+    var sigInt=Math.round(I*pi);
+    var noInt=I-sigInt;
+
+    var rateSig = sigApp>0 ? sigInt/sigApp : 0;
+    var rateNo  = noApp>0  ? noInt/noApp  : 0;
+    var overall = N>0 ? I/N : 0;
+    var ratio   = rateNo>0 ? rateSig/rateNo : 0;
+
+    el.rateSignal.textContent=pct(rateSig);
+    el.rateNoSignal.textContent=pct(rateNo);
+    el.ratio.textContent = rateNo>0 ? mult(ratio) : 'n/a';
+
+    el.oSigApp.textContent=numFmt(sigApp);
+    el.oNoApp.textContent=numFmt(noApp);
+    el.oSigInt.textContent=numFmt(sigInt);
+    el.oNoInt.textContent=numFmt(noInt);
+    el.oRateSig.textContent=pct(rateSig);
+    el.oRateNo.textContent=pct(rateNo);
+    el.oOverall.textContent=pct(overall);
+    el.oMult.textContent = rateNo>0 ? mult(ratio) : 'n/a';
+  }
+
+  ids.forEach(function(i){el[i].addEventListener('input',calc);});
+  calc();
+})();
+</script>
+</body>
+</html>
